@@ -288,7 +288,7 @@ const upload = multer({ dest: 'uploads/' });
         <body>
           <div class="container">
             <div class="header">
-              <img src="https://i.postimg.cc/BZBFZPqk/favicon.png" alt="Logo EMEI">
+              <img src="https://i.postimg.cc/vZzhthCb/favicon-email.png" alt="Logo EMEI">
             </div>
             
             <div class="content">
@@ -393,7 +393,7 @@ const upload = multer({ dest: 'uploads/' });
         <body>
           <div class="container">
             <div class="header">
-              <img src="https://i.postimg.cc/BZBFZPqk/favicon.png" alt="Logo EMEI">
+              <img src="https://i.postimg.cc/vZzhthCb/favicon-email.png" alt="Logo EMEI">
             </div>
             
             <div class="content">
@@ -1638,7 +1638,7 @@ const updateInscricao = async (req, res) => {
           <body>
             <div class="container">
               <div class="header">
-                <img src="https://i.postimg.cc/BZBFZPqk/favicon.png" alt="Logo EMEI">
+                <img src="https://i.postimg.cc/vZzhthCb/favicon-email.png" alt="Logo EMEI">
               </div>
               
               <div class="content">
