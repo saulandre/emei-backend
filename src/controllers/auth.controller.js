@@ -174,7 +174,11 @@ const RESEND_INTERVAL = 60000; // 60 segundos
         <body>
           <div class="container">
             <div class="header">
-             <img src="https://raw.githubusercontent.com/saulandre/emei-backend/main/src/public/favicon.png" alt="Logo EMEI" />
+<img 
+  src="https://raw.githubusercontent.com/saulandre/emei-backend/main/src/public/favicon.png" 
+  alt="Logo EMEI" 
+  style="width: 120px; height: 120px;"
+/>
 
             </div>
             
