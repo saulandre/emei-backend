@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
-
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const authRoutes = require('./routes/auth.routes');
 
@@ -54,6 +54,7 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 
 app.use((err, req, res, next) => {
