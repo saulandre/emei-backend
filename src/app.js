@@ -55,6 +55,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
+console.log('Public folder path:', path.join(__dirname, 'public'));
 
 
 app.use((err, req, res, next) => {

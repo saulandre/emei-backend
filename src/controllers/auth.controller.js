@@ -151,7 +151,7 @@ const RESEND_INTERVAL = 60000; // 60 segundos
             .verification-code {
               display: inline-block;
               padding: 15px 30px;
-              background-color: #6599FF;
+              background-color: #d64042;
               border-radius: 6px;
               font-size: 24px;
               font-weight: 600;
@@ -370,7 +370,7 @@ const upload = multer({ dest: 'uploads/' });
             .verification-code {
               display: inline-block;
               padding: 15px 30px;
-              background-color: #6599FF;
+              background-color: #d64042;
               border-radius: 6px;
               font-size: 24px;
               font-weight: 600;
