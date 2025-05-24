@@ -21,9 +21,9 @@ const {
   AtualizarpaymentId,
   atualizarPerfil,
   updateInscricao,
-  enviarComprovante
+  enviarEmailComArquivo
 } = require('../controllers/auth.controller.js');
-const upload = require('../middlewares/upload');
+const upload = require('../config/upload');
 
 const {
   validateLogin,
@@ -34,6 +34,7 @@ const {
 const { isAdmin } = require('../middlewares/isAdmin.js');
 
 const router = express.Router();
+const fs = require('fs');
 
 
 // Middleware de logs para monitorar acesso
@@ -65,15 +66,7 @@ router.put('/updateProfile/:id', isAuthenticated, isAdmin, updateProfile)
 router.put('/pagamentos/:id/status', isAuthenticated, isAdmin, AtualizarpaymentId);
 router.put('/atualizarPerfil/', isAuthenticated, atualizarPerfil)
 router.put('/participante/:id', isAuthenticated, updateInscricao);
-router.post('/enviar-comprovante', 
-  upload.single('comprovante'), // Middleware Multer
-  (req, res, next) => { // Middleware para log
-    console.log("Arquivo recebido:", req.file);
-    console.log("Dados do corpo:", req.body);
-    next();
-  },
-  enviarComprovante
-);
+
 router.post('/forgot-password', forgotPassword);
 router.post('/recuperarsenha', resetPassword);
 // Middleware de tratamento de erros global
@@ -82,6 +75,29 @@ router.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
+router.post('/enviar-comprovante', upload.single('arquivo'), async (req, res) => {
+  const { nomeCompleto, email } = req.body;
+  const arquivo = req.file;
+
+  if (!nomeCompleto || !email || !arquivo) {
+    return res.status(400).json({ erro: 'Nome completo, email e arquivo são obrigatórios.' });
+  }
+
+  try {
+    await enviarEmailComArquivo(nomeCompleto, email, arquivo);
+    res.status(200).json({ mensagem: 'Comprovante enviado com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  } finally {
+    fs.unlink(arquivo.path, (err) => {
+      if (err) {
+        console.error('Erro ao remover arquivo temporário:', err);
+      } else {
+        console.log('Arquivo temporário removido:', arquivo.path);
+      }
+    });
+  }
+});
 
 
 module.exports = router;
