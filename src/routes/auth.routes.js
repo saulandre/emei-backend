@@ -79,12 +79,12 @@ router.post('/enviar-comprovante', upload.single('arquivo'), async (req, res) =>
   const { nomeCompleto, email } = req.body;
   const arquivo = req.file;
 
-  if (!nomeCompleto || !email || !arquivo) {
-    return res.status(400).json({ erro: 'Nome completo, email e arquivo são obrigatórios.' });
+  if (!nomeCompleto || !arquivo) {
+    return res.status(400).json({ erro: 'Nome completo e arquivo são obrigatórios.' });
   }
 
   try {
-    await enviarEmailComArquivo(nomeCompleto, email, arquivo);
+    await enviarEmailComArquivo(nomeCompleto, arquivo);
     res.status(200).json({ mensagem: 'Comprovante enviado com sucesso!' });
   } catch (err) {
     res.status(500).json({ erro: err.message });

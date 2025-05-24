@@ -1864,12 +1864,12 @@ const atualizarPerfil = async (req, res) => {
   }
 };
 
-const enviarEmailComArquivo = async (nomeCompleto, email, arquivo) => {
+const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
   console.log('Arquivo recebido:', arquivo);
   try {
     await transporter.sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
-      to: [email, 'and969696@outlook.com', 'saulandre@gmail.com', 'emeiiraja23@gmail.com'],
+      to: ['and969696@outlook.com', 'saulandre@gmail.com', 'emeiiraja23@gmail.com'],
       subject: `Pagamento de ${nomeCompleto} confirmado`,
       html: `
         <!DOCTYPE html>
@@ -1946,7 +1946,7 @@ const enviarEmailComArquivo = async (nomeCompleto, email, arquivo) => {
       ],
     });
 
-    console.log(`✅ E-mail de comprovante enviado para: ${email}`);
+    console.log(`✅ E-mail de comprovante enviado para: `);
   } catch (error) {
     console.error('❌ Erro ao enviar comprovante:', error);
     throw new Error('Falha no envio do e-mail de comprovante');
