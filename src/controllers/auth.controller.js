@@ -781,7 +781,7 @@ const mercadopago = require('mercadopago');
 
     // Configuração do Evento
     comissao: Joi.string()
-      .optional()
+      .optional().allow('')
       .label('Comissão'),
       camisa: Joi.boolean()
       .optional()
