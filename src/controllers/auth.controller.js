@@ -42,9 +42,8 @@ const MESSAGES = {
   },
 };
 
-// const supabase = require('../config/supabase'); // Arquivo de configuração separado
 
-const enviarComprovante = async (req, res) => { // Adicione req e res como parâmetros
+const enviarComprovante = async (req, res) => { 
   try {
     // Validação
     if (!req.body.nome || !req.file) {
@@ -1074,6 +1073,7 @@ const updateInscricao = async (req, res) => {
         vegetariano: true,
         camisa: true,
         tamanhoCamisa: true,
+        tipoParticipacao: true,
         primeiraComejaca: true,
         deficienciaAuditiva: true,
         deficienciaAutismo: true,
@@ -1126,6 +1126,8 @@ const updateInscricao = async (req, res) => {
         id: true,
         nomeCompleto: true,
         IE: true,
+        tipoParticipacao: true,
+        camisa: true,
         createdAt: true,
       }
     });
@@ -1869,7 +1871,7 @@ const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
     await transporter.sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       to: ['and969696@outlook.com', 'saulandre@gmail.com', 'emeiiraja23@gmail.com'],
-      subject: `Pagamento de ${nomeCompleto} confirmado`,
+      subject: `Comprovante de ${nomeCompleto} enviado`,
       html: `
         <!DOCTYPE html>
         <html lang="pt-BR">
@@ -1904,7 +1906,7 @@ const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
               color: #4a4e69;
             }
             a {
-              color: #2b6cb0 !important;
+              color: #d64042 !important;
               text-decoration: none !important;
             }
             .footer {
@@ -1924,12 +1926,12 @@ const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
             </div>
             <div class="content">
               <p>Prezado(a) ${nomeCompleto},</p>
-              <p>Recebemos e confirmamos o seu pagamento.</p>
+              <p>Recebemos o seu comprovante.</p>
               <p>Verifique no anexo o comprovante correspondente.</p>
               <p>Obrigado por sua participação!<br />Equipe EMEI</p>
             </div>
             <div class="footer">
-              <p>Esta é uma mensagem automática. Por favor não responda este e-mail.</p>
+
               <p>Dúvidas? Contate-nos: emeiiraja23@gmail.com </p>
               <p>© ${new Date().getFullYear()} EMEI App. Todos os direitos reservados.</p>
             </div>

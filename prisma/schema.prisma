@@ -152,4 +152,5 @@ enum Sexo {
 enum TipoParticipacao {
   Confraternista
   Trabalhador
+  PC
 }
