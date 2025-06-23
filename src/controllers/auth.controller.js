@@ -793,7 +793,13 @@ const mercadopago = require('mercadopago');
     }),
     
     vegetariano: Joi.string().label('Vegetarianismo'),
-    
+       comejaca: Joi.boolean()
+      .optional()
+      .label('Comejaca'),
+
+         conmel: Joi.boolean()
+      .optional()
+      .label('Conmel'),
 
     // Endereço
     cep: Joi.string().pattern(/^\d{5}-?\d{3}$/).required().label('CEP'),
@@ -1006,6 +1012,8 @@ const preferenceData = {
           medicacao: true,
           alergia: true,
           outrasInformacoes: true,
+          comejaca:true,
+          conmel: true,
           outroGenero: true,
        //   valor: true,
        //   linkPagamento: true,

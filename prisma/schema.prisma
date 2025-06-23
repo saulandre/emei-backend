@@ -108,6 +108,8 @@ model Participante2025 {
   valor                        Float?
   cpf                          String?
   otherInstitution             String?
+    comejaca  Boolean @default(false)
+  conmel    Boolean @default(false)
   nomeCracha                   String?
   instituicao                  InstituicaoEspirita? @relation(fields: [instituicaoId], references: [id])
   user                         Users?               @relation(fields: [userId], references: [id])
