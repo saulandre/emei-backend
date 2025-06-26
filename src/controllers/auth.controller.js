@@ -1136,6 +1136,7 @@ const updateInscricao = async (req, res) => {
         IE: true,
         tipoParticipacao: true,
         camisa: true,
+        tipoCamisa: true,
         createdAt: true,
       }
     });
@@ -1425,6 +1426,7 @@ const updateInscricao = async (req, res) => {
           email: true,
           telefone: true,
           tipoParticipacao: true,
+          tipoCamisa:true,
           nomeCompletoResponsavel: true,
           documentoResponsavel: true,
           telefoneResponsavel: true,

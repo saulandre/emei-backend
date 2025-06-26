@@ -89,7 +89,8 @@ model Participante2025 {
   instituicaoId                Int?
   nomeSocial                   String?
   vegetariano                  String               @default("N/A")
-  camisa                       Boolean?
+  camisa                       String?
+ tipoCamisa                    String?
   deficienciaAuditiva          Boolean?
   deficienciaAutismo           Boolean?
   deficienciaFisica            Boolean?
