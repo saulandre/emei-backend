@@ -744,14 +744,13 @@ const calcularIdade = (dataNascimento) => {
 const mercadopago = require('mercadopago');
 
 
- const participante = async (req, res) => {
+const participante = async (req, res) => {
   const userId = req.userId;
   console.log("Valor de userId:", userId);
   console.log("Dados recebidos:", req.body);
 
   // Schema de validação completo
   const schema = Joi.object({
-    // Dados Pessoais
     nomeCompleto: Joi.string().min(3).max(100).required().label('Nome Completo'),
     nomeSocial: Joi.string().min(3).max(100).allow(null, '').optional().label('Nome social'),
     nomeCracha: Joi.string().min(2).max(100).allow(null, '').required().label('Nome no crachá'),
@@ -759,51 +758,21 @@ const mercadopago = require('mercadopago');
     sexo: Joi.string().required().label('Pronome'),
     email: Joi.string().email().max(100).required().label('E-mail'),
     telefone: Joi.string().pattern(/^\d{10,11}$/).required().label('Telefone'),
-
-    // Responsável (para menores)
-    tipoParticipacao: Joi.string()
-      .valid('Confraternista', 'Trabalhador', 'PC')
-      .required()
-      .label('Tipo de Participação'),
-    nomeCompletoResponsavel: Joi.string()
-      .min(3)
-      .max(100)
-      .allow(null, '')
-      .optional()
-      .label('Nome do Responsável'),
-    documentoResponsavel: Joi.string()
-      /* .pattern(/^\d{10,11}$/)  */
-      .allow(null, '')
-      .optional()
-      .label('Documento do Responsável'),
-      telefoneResponsavel: Joi.string().pattern(/^\d{10,11}$/).allow(null, '').optional().label('Telefone do Responsável'),
-
-    // Configuração do Evento
-    comissao: Joi.string()
-      .optional().allow('')
-      .label('Comissão'),
-      camisa: Joi.boolean()
-      .optional()
-      .label('Camisa'),
-    tipoCamisa: Joi.string()
-      .optional().allow('')
-      .label('Tipo da Camisa'),
+    tipoParticipacao: Joi.string().valid('Confraternista', 'Trabalhador', 'PC').required().label('Tipo de Participação'),
+    nomeCompletoResponsavel: Joi.string().min(3).max(100).allow(null, '').optional().label('Nome do Responsável'),
+    documentoResponsavel: Joi.string().allow(null, '').optional().label('Documento do Responsável'),
+    telefoneResponsavel: Joi.string().pattern(/^\d{10,11}$/).allow(null, '').optional().label('Telefone do Responsável'),
+    comissao: Joi.string().optional().allow('').label('Comissão'),
+    camisa: Joi.boolean().optional().label('Camisa'),
+    tipoCamisa: Joi.string().optional().allow('').label('Tipo da Camisa'),
     tamanhoCamisa: Joi.when('camisa', {
       is: true,
-      then: Joi.string().required().label('Tamanho da Camisa'), 
+      then: Joi.string().required().label('Tamanho da Camisa'),
       otherwise: Joi.string().allow('').optional()
     }),
-    
     vegetariano: Joi.string().label('Vegetarianismo'),
-       comejaca: Joi.boolean()
-      .optional()
-      .label('Comejaca'),
-
-         conmel: Joi.boolean()
-      .optional()
-      .label('Conmel'),
-
-    // Endereço
+    comejaca: Joi.boolean().optional().label('Comejaca'),
+    conmel: Joi.boolean().optional().label('Conmel'),
     cep: Joi.string().pattern(/^\d{5}-?\d{3}$/).required().label('CEP'),
     estado: Joi.string().length(2).required().label('Estado'),
     cidade: Joi.string().max(50).required().label('Cidade'),
@@ -814,7 +783,6 @@ const mercadopago = require('mercadopago');
     complemento: Joi.string().max(50).allow(null, '').optional().label('Complemento'),
     primeiraComejaca: Joi.boolean().default(false),
     deficienciaAuditiva: Joi.boolean().default(false),
-    otherInstitution: Joi.string().allow(null, '').optional().label('Outra Instituição'),
     deficienciaAutismo: Joi.boolean().default(false),
     deficienciaIntelectual: Joi.boolean().default(false),
     deficienciaParalisiaCerebral: Joi.boolean().default(false),
@@ -829,12 +797,11 @@ const mercadopago = require('mercadopago');
       }),
       otherwise: Joi.string().allow('').optional(),
     }),
-
-    // Saúde
     medicacao: Joi.string().max(500).allow(null, '').optional().label('Medicação'),
     alergia: Joi.string().max(500).allow(null, '').optional().label('Alergia'),
     outrasInformacoes: Joi.string().max(1000).allow(null, '').optional().label('Outras Informações'),
-    outroGenero: Joi.string().max(1000).allow(null, '').optional().label('Outros Gêneros')
+    outroGenero: Joi.string().max(1000).allow(null, '').optional().label('Outros Gêneros'),
+    otherInstitution: Joi.string().allow(null, '').optional().label('Outra Instituição')
   }).messages({
     'any.required': 'O campo {{#label}} é obrigatório',
     'string.empty': 'O campo {{#label}} não pode estar vazio',
@@ -842,7 +809,6 @@ const mercadopago = require('mercadopago');
     'date.max': '{{#label}} não pode ser uma data futura'
   });
 
-  // Validação dos dados
   const { error } = schema.validate(req.body, { abortEarly: false });
   if (error) {
     const errors = error.details.map(detail => ({
@@ -856,7 +822,6 @@ const mercadopago = require('mercadopago');
   }
 
   try {
-    // Verificação do usuário
     const usuario = await prisma.users.findUnique({
       where: { id: userId },
       select: { id: true, isVerified: true }
@@ -868,6 +833,7 @@ const mercadopago = require('mercadopago');
     if (!usuario.isVerified) {
       return res.status(403).json({ error: MESSAGES.errors.unverifiedUser });
     }
+
     const participanteId = uuidv4();
     const dadosParticipante = {
       id: participanteId,
@@ -875,169 +841,88 @@ const mercadopago = require('mercadopago');
       userId,
       dataNascimento: new Date(req.body.dataNascimento),
     };
-    
-    console.log("Dados antes de tratar telefone e CEP:", dadosParticipante);
-    
-    // Verificação de telefone e CEP
-    const camposComErro = ['cep', 'telefone', 'telefoneResponsavel', 'documentoResponsavel'];
-    
-    camposComErro.forEach(campo => {
-      if (req.body[campo] !== undefined) {
-        console.log(`${campo}:`, req.body[campo]);
+
+    // 🔧 Limpeza de campos específicos
+    dadosParticipante.cep = req.body.cep?.replace(/\D/g, '') || '';
+    dadosParticipante.telefone = req.body.telefone?.replace(/\D/g, '') || '';
+    dadosParticipante.telefoneResponsavel = req.body.telefoneResponsavel?.replace(/\D/g, '') || '';
+    dadosParticipante.documentoResponsavel = req.body.documentoResponsavel?.replace(/\D/g, '') || '';
+
+    // ✅ Forçar conversão correta de campos booleanos
+    const camposBooleanos = [
+      'camisa',
+      'comejaca',
+      'conmel',
+      'primeiraComejaca',
+      'deficienciaAuditiva',
+      'deficienciaAutismo',
+      'deficienciaIntelectual',
+      'deficienciaParalisiaCerebral',
+      'deficienciaVisual',
+      'deficienciaFisica',
+      'deficienciaOutra'
+    ];
+
+    camposBooleanos.forEach(campo => {
+      if (typeof dadosParticipante[campo] === 'string') {
+        dadosParticipante[campo] = dadosParticipante[campo] === 'true';
       }
     });
-    console.log('CEP:', req.body.cep); // Adicione isso antes da linha de tratamento
-dadosParticipante.cep = req.body.cep && typeof req.body.cep === 'string' ? req.body.cep.replace(/\D/g, '') : '';
 
- 
-    dadosParticipante.telefone = req.body.telefone && typeof req.body.telefone === 'string' ? req.body.telefone.replace(/\D/g, '') : '';
-    dadosParticipante.telefoneResponsavel = req.body.telefoneResponsavel && typeof req.body.telefoneResponsavel === 'string' ? req.body.telefoneResponsavel.replace(/\D/g, '') : '';
-    dadosParticipante.documentoResponsavel = req.body.documentoResponsavel && typeof req.body.documentoResponsavel === 'string' ? req.body.documentoResponsavel.replace(/\D/g, '') : '';
-    
-    console.log("Dados após tratar telefone e CEP:", dadosParticipante);
-    
-    
-    
- 
+    console.log('Dados que vão pro banco:', dadosParticipante);
 
-    
+    const novoParticipante = await prisma.participante2025.create({
+      data: dadosParticipante,
+      select: {
+        id: true,
+        nomeCompleto: true,
+        nomeCracha: true,
+        nomeSocial: true,
+        dataNascimento: true,
+        sexo: true,
+        email: true,
+        telefone: true,
+        tipoParticipacao: true,
+        nomeCompletoResponsavel: true,
+        documentoResponsavel: true,
+        telefoneResponsavel: true,
+        cep: true,
+        estado: true,
+        cidade: true,
+        IE: true,
+        bairro: true,
+        logradouro: true,
+        numero: true,
+        complemento: true,
+        vegetariano: true,
+        camisa: true,
+        tamanhoCamisa: true,
+        primeiraComejaca: true,
+        deficienciaAuditiva: true,
+        deficienciaAutismo: true,
+        deficienciaIntelectual: true,
+        deficienciaParalisiaCerebral: true,
+        deficienciaVisual: true,
+        deficienciaFisica: true,
+        deficienciaOutra: true,
+        deficienciaOutraDescricao: true,
+        medicacao: true,
+        alergia: true,
+        outrasInformacoes: true,
+        comejaca: true,
+        conmel: true,
+        outroGenero: true,
+        otherInstitution: true
+      }
+    });
 
-    // Calcular idade
-    const idade = calcularIdade(dadosParticipante.dataNascimento);
+    return res.status(201).json({
+      success: true,
+      message: MESSAGES.success.participantCreated,
+      data: novoParticipante,
+    });
 
-/*     // Definir valor da inscrição
-    const valor = idade < 11 ? 45 : 60;
-
-    const { email, nomeCompleto, id } = req.body;
-
-    // Criar preferência de pagamento com o Mercado Pago
-    const BASE_URL = process.env.BASE_URL || 'http://localhost:4000';
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-  
-const client = new mercadopago.MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-});
-
-const preference = new mercadopago.Preference(client);
-const preferenceData = {
-  items: [
-    {
-      title: 'EMEI | INSCRIÇÃO',
-      quantity: 1,
-      currency_id: 'BRL',
-      unit_price: Number(valor),
-    },
-  ],
-  payer: {
-    email: email,
-    name: nomeCompleto,
-
-     },
-
-     metadata: {
-       participanteId:  dadosParticipante.id
-    },
-     payment_methods: {
-  
-      excluded_payment_methods: [
-        { id: 'ticket' }, 
-        { id: 'atm' }   
-      ],
-      excluded_payment_types: [
-        { id: 'ticket' }
-      ], 
-      installments: 1, 
-    },
-  notification_url: `${BASE_URL}/api/auth/mercadopago/notificacao`,
-  back_urls: {
-    success: `${FRONTEND_URL}/sucesso`,
-    failure: `${FRONTEND_URL}/falha`,
-    pending: `${FRONTEND_URL}/pendente`,
-  },
-  auto_return: 'approved',
-};
-
-
-
-    try {
-      // Criar link de pagamento
-      const mpResponse = await preference.create({ body: preferenceData });
-
-      const linkPagamento = mpResponse.init_point;
-      console.log('mpResponse:', mpResponse);
-      console.log('Link de pagamento:', mpResponse.init_point); 
-   
-    
-      // Anexar dados de pagamento ao participante
-      dadosParticipante.valor = valor;
-      dadosParticipante.linkPagamento = linkPagamento;
-      dadosParticipante.statusPagamento = 'pendente';
- */
-      console.log('Dados que vão pro banco:', dadosParticipante);
-      console.log('Prisma Client:', prisma);
-      // Criação do participante no banco
-      const novoParticipante = await prisma.participante2025.create({
-        data: dadosParticipante,
-        select: {
-          id: true,
-          nomeCompleto: true,
-          nomeCracha: true,
-          nomeSocial: true,
-          dataNascimento: true,
-          sexo: true,
-          email: true,
-          telefone: true,
-          tipoParticipacao: true,
-          nomeCompletoResponsavel: true,
-          documentoResponsavel: true,
-          telefoneResponsavel: true,
-          cep: true,
-          estado: true,
-          cidade: true,
-          IE: true,
-          bairro: true,
-          logradouro: true,
-          numero: true,
-          complemento: true,
-          vegetariano: true,
-          camisa: true,
-          tamanhoCamisa: true,
-          primeiraComejaca: true,
-          deficienciaAuditiva: true,
-          deficienciaAutismo: true,
-          deficienciaIntelectual: true,
-          deficienciaParalisiaCerebral: true,
-          deficienciaVisual: true,
-          deficienciaFisica: true,
-          deficienciaOutra: true,
-          deficienciaOutraDescricao: true,
-          medicacao: true,
-          alergia: true,
-          outrasInformacoes: true,
-          comejaca:true,
-          conmel: true,
-          outroGenero: true,
-       //   valor: true,
-       //   linkPagamento: true,
-       //   statusPagamento: true,
-          otherInstitution: true
-        },
-      });
- //    console.log('Resposta do MercadoPago:', mpResponse);
-      // Retornar dados do participante
-      return res.status(201).json({
-        success: true,
-        message: MESSAGES.success.participantCreated,
-        data: novoParticipante,
-      });
-    } /* catch (paymentError) {
-      console.error('Erro ao criar pagamento:', paymentError);
-      return res.status(500).json({
-        error: MESSAGES.errors.paymentError,
-        details: paymentError.message,
-      });
-    }
-  }  */catch (err) {
+  } catch (err) {
     console.error('Erro ao processar participante:', err);
     return res.status(500).json({
       error: MESSAGES.errors.internalError,
