@@ -785,7 +785,9 @@ const mercadopago = require('mercadopago');
       camisa: Joi.boolean()
       .optional()
       .label('Camisa'),
-    
+    tipoCamisa: Joi.string()
+      .optional().allow('')
+      .label('Tipo da Camisa'),
     tamanhoCamisa: Joi.when('camisa', {
       is: true,
       then: Joi.string().required().label('Tamanho da Camisa'), 
@@ -1136,7 +1138,7 @@ const updateInscricao = async (req, res) => {
         IE: true,
         tipoParticipacao: true,
         camisa: true,
-        tipoCamisa: true,
+       tipoCamisa: true,
         createdAt: true,
       }
     });
