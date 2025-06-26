@@ -762,7 +762,7 @@ const mercadopago = require('mercadopago');
 
     // Responsável (para menores)
     tipoParticipacao: Joi.string()
-      .valid('Confraternista', 'Trabalhador')
+      .valid('Confraternista', 'Trabalhador', 'PC')
       .required()
       .label('Tipo de Participação'),
     nomeCompletoResponsavel: Joi.string()
