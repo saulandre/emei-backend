@@ -11,17 +11,19 @@ const {
   getparticipantes,
   criarInstituicao,
   listarInstituicoes,
+  enviarEmailRedefinicao,
   atualizarInstituicao,
   updateProfile,
   paymentId,
   forgotPassword,
-  resetPassword,
+  
   listarParticipantes,
   notificacao,
   AtualizarpaymentId,
   atualizarPerfil,
   updateInscricao,
-  enviarEmailComArquivo
+  enviarEmailComArquivo,
+  resetPassword
 } = require('../controllers/auth.controller.js');
 const upload = require('../config/upload');
 
@@ -57,7 +59,7 @@ router.get('/inscrever', isAuthenticated, participante);
 router.get('/obterinscricoes', isAuthenticated, getparticipantes);
 router.get('/print/:participanteId', isAuthenticated, obterInscricao);
 router.get('/pagamento/:id', isAuthenticated, paymentId);
-router.get('/pagamentos', isAuthenticated, listarParticipantes);
+router.get('/pagam  entos', isAuthenticated, listarParticipantes);
 router.post('/mercadopago/notificacao', notificacao);
 router.post('/novainstituicao', isAuthenticated, isAdmin,  criarInstituicao);
 router.get('/instituicoes', listarInstituicoes);
@@ -66,9 +68,11 @@ router.put('/updateProfile/:id', isAuthenticated, isAdmin, updateProfile)
 router.put('/pagamentos/:id/status', isAuthenticated, isAdmin, AtualizarpaymentId);
 router.put('/atualizarPerfil/', isAuthenticated, atualizarPerfil)
 router.put('/participante/:id', isAuthenticated, updateInscricao);
+router.post('/forgot-password', enviarEmailRedefinicao);
+router.post('/reset-password',  resetPassword);
 
-router.post('/forgot-password', forgotPassword);
-router.post('/recuperarsenha', resetPassword);
+/* router.post('/forgot-password', forgotPassword);
+ */router.post('/recuperarsenha', resetPassword);
 // Middleware de tratamento de erros global
 router.use((err, req, res, next) => {
   console.error('💥 Erro:', err.message);
