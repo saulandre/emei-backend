@@ -1125,7 +1125,7 @@ const resetLink = url.toString();
               padding: 14px 28px;
               font-size: 16px;
               color: #fff;
-              background-color: #2b6cb0;
+              background-color: #d64042;
               text-decoration: none;
               border-radius: 6px;
             }
