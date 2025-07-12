@@ -59,7 +59,7 @@ router.get('/inscrever', isAuthenticated, participante);
 router.get('/obterinscricoes', isAuthenticated, getparticipantes);
 router.get('/print/:participanteId', isAuthenticated, obterInscricao);
 router.get('/pagamento/:id', isAuthenticated, paymentId);
-router.get('/pagam  entos', isAuthenticated, listarParticipantes);
+router.get('/pagamentos', isAuthenticated, listarParticipantes);
 router.post('/mercadopago/notificacao', notificacao);
 router.post('/novainstituicao', isAuthenticated, isAdmin,  criarInstituicao);
 router.get('/instituicoes', listarInstituicoes);
