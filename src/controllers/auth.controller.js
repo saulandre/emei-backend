@@ -1783,6 +1783,9 @@ const resetPassword = async (req, res) => {
           IE: true,
           statusPagamento: true,
           linkPagamento: true,
+             tipoParticipacao:true, 
+          comissao: true,
+          dataNascimento: true,
         },
       });
   
