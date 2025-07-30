@@ -744,7 +744,7 @@ const calcularIdade = (dataNascimento) => {
 const mercadopago = require('mercadopago');
 
 
-const participante = async (req, res) => {
+/* const participante = async (req, res) => {
   const userId = req.userId;
   console.log("Valor de userId:", userId);
   console.log("Dados recebidos:", req.body);
@@ -930,7 +930,7 @@ const participante = async (req, res) => {
     });
   }
 };
-
+ */
 const updateInscricao = async (req, res) => {
   const { id } = req.params;
   const dadosParticipante = req.body;
