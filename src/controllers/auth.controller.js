@@ -744,7 +744,7 @@ const calcularIdade = (dataNascimento) => {
 const mercadopago = require('mercadopago');
 
 
-/* const participante = async (req, res) => {
+ const participante = async (req, res) => {
   const userId = req.userId;
   console.log("Valor de userId:", userId);
   console.log("Dados recebidos:", req.body);
@@ -871,7 +871,7 @@ const mercadopago = require('mercadopago');
 
     console.log('Dados que vão pro banco:', dadosParticipante);
 
-    const novoParticipante = await prisma.participante2025.create({
+    /*const novoParticipante = await prisma.participante2025.create({
       data: dadosParticipante,
       select: {
         id: true,
@@ -914,8 +914,7 @@ const mercadopago = require('mercadopago');
         outroGenero: true,
         otherInstitution: true
       }
-    });
-
+    }); */
     return res.status(201).json({
       success: true,
       message: MESSAGES.success.participantCreated,
@@ -930,7 +929,7 @@ const mercadopago = require('mercadopago');
     });
   }
 };
- */
+
 const updateInscricao = async (req, res) => {
   const { id } = req.params;
   const dadosParticipante = req.body;
