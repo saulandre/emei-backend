@@ -1,26 +1,24 @@
-const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
+const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
 
 dotenv.config();
 
-dotenv.config();
+const port = Number(process.env.MAIL_PORT || 587);
 
-// Verificando se a porta e o secure estão configurados corretamente
-const port = Number(process.env.MAIL_PORT);
-const secure = port === 465; // Usar SSL/TLS com porta 465, caso contrário, STARTTLS com 587
-
-// Criação do transportador para o Nodemailer
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST, // smtp.gmail.com
-  port: port,                  // Porta definida nas variáveis de ambiente (587 ou 465)
-  secure: secure,              // Configuração de segurança
+  host: process.env.MAIL_HOST || "smtp.gmail.com",
+  port,
+  secure: port === 465, // true só para 465; false para 587
+  requireTLS: port === 587,
   auth: {
-    user: process.env.MAIL_USER, // E-mail de envio
-    pass: process.env.MAIL_PASS, // Senha ou App Password (para Gmail)
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
   },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
 });
 
-// Testando a conexão
 transporter.verify((error, success) => {
   if (error) {
     console.log("Erro ao conectar no SMTP:", error);
