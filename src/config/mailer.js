@@ -1,54 +1,22 @@
 const fs = require("fs");
-const nodemailer = require("nodemailer");
 const { Resend } = require("resend");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
-const useResend = Boolean(process.env.RESEND_API_KEY);
-
-const port = Number(process.env.MAIL_PORT || 587);
-const mailTimeout = Number(process.env.MAIL_CONNECTION_TIMEOUT || 60000);
-
-let transporter = null;
 let resendClient = null;
 
-function getTransporter() {
-  if (transporter) return transporter;
-  transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST || "smtp.gmail.com",
-    port,
-    secure: port === 465,
-    requireTLS: port === 587,
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-    connectionTimeout: mailTimeout,
-    greetingTimeout: mailTimeout,
-    socketTimeout: mailTimeout,
-    pool: true,
-    maxConnections: 2,
-    maxMessages: 20,
-    tls: {
-      rejectUnauthorized: process.env.MAIL_TLS_REJECT_UNAUTHORIZED !== "false",
-    },
-  });
-
-  transporter.verify((error) => {
-    if (error) {
-      console.log("Erro ao conectar no SMTP:", error);
-    } else {
-      console.log("Conexão SMTP bem-sucedida!");
-    }
-  });
-
-  return transporter;
-}
-
 function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !String(key).trim()) {
+    const err = new Error(
+      "RESEND_API_KEY não configurada. Configure a chave da API Resend."
+    );
+    err.code = "RESEND_NOT_CONFIGURED";
+    throw err;
+  }
   if (!resendClient) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+    resendClient = new Resend(String(key).trim());
   }
   return resendClient;
 }
@@ -95,11 +63,20 @@ function mapAttachmentsForResend(attachments) {
 
 function resolveFrom(options) {
   if (options.from) return options.from;
-  if (useResend && process.env.RESEND_FROM) return process.env.RESEND_FROM;
-  return `"EMEI" <${process.env.MAIL_USER}>`;
+  if (process.env.RESEND_FROM) return process.env.RESEND_FROM;
+  if (process.env.MAIL_USER) {
+    return `"EMEI" <${process.env.MAIL_USER}>`;
+  }
+  throw new Error(
+    "Remetente não definido: use from no envio ou defina RESEND_FROM ou MAIL_USER."
+  );
 }
 
-async function sendMailWithResend(options) {
+/**
+ * Envia e-mail exclusivamente via Resend (API).
+ * @param {object} options - Compatível com o objeto usado antes (from, to, subject, html, text, attachments, etc.)
+ */
+async function sendMail(options) {
   const resend = getResend();
   const to = normalizeRecipients(options.to);
   if (!to?.length) {
@@ -141,13 +118,6 @@ async function sendMailWithResend(options) {
   }
 
   return { messageId: data?.id, ...data };
-}
-
-async function sendMail(options) {
-  if (useResend) {
-    return sendMailWithResend(options);
-  }
-  return getTransporter().sendMail(options);
 }
 
 module.exports = { sendMail };

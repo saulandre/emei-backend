@@ -114,7 +114,7 @@ const RESEND_INTERVAL = 60000; // 60 segundos
     await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       headers: {
-        'X-Mailer': 'Nodemailer',
+        'X-Mailer': 'EMEI-Portal',
         'X-Priority': '3',
         'Return-Path': 'process.env.MAIL_USER' 
       },
@@ -241,7 +241,7 @@ const upload = multer({ dest: 'uploads/' });
     await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       headers: {
-        'X-Mailer': 'Nodemailer',
+        'X-Mailer': 'EMEI-Portal',
         'X-Priority': '3',
         'Return-Path': 'process.env.MAIL_USER' 
       },
@@ -1679,7 +1679,7 @@ const resetPassword = async (req, res) => {
       await sendMail({
         from: `"EMEI" <${process.env.MAIL_USER}>`,
         headers: {
-          'X-Mailer': 'Nodemailer',
+          'X-Mailer': 'EMEI-Portal',
           'X-Priority': '3',
           'Return-Path': 'process.env.MAIL_USER' 
         },
