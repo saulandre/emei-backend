@@ -23,6 +23,8 @@ model Users {
   comunicacaomovimento       String?
   telefone                   String?
   resetTokenVersion          Int                   @default(0)
+  resetTokenHash             String?
+  resetTokenExpires          DateTime?
   instituicoesAtualizadas    InstituicaoEspirita[] @relation("InstituicaoAtualizadaPor")
   instituicoesCriadas        InstituicaoEspirita[] @relation("InstituicaoCriadaPor")
   Participante2025           Participante2025[]

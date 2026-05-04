@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { generateVerificationCode } = require('../services/validation');
 const dotenv = require('dotenv');
@@ -12,6 +13,8 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const prisma = new PrismaClient();
 dotenv.config();
+
+const PASSWORD_RESET_GENERIC_ERROR = 'Token inválido ou expirado.';
 
 // Constantes atualizadas para mensagens
 const MESSAGES = {
@@ -871,7 +874,7 @@ const mercadopago = require('mercadopago');
 
     console.log('Dados que vão pro banco:', dadosParticipante);
 
-    /*const novoParticipante = await prisma.participante2025.create({
+    const novoParticipante = await prisma.participante2025.create({
       data: dadosParticipante,
       select: {
         id: true,
@@ -896,6 +899,7 @@ const mercadopago = require('mercadopago');
         complemento: true,
         vegetariano: true,
         camisa: true,
+        tipoCamisa: true,
         tamanhoCamisa: true,
         primeiraComejaca: true,
         deficienciaAuditiva: true,
@@ -912,9 +916,9 @@ const mercadopago = require('mercadopago');
         comejaca: true,
         conmel: true,
         outroGenero: true,
-        otherInstitution: true
-      }
-    }); */
+        otherInstitution: true,
+      },
+    });
     return res.status(201).json({
       success: true,
       message: MESSAGES.success.participantCreated,
@@ -1062,28 +1066,39 @@ const updateInscricao = async (req, res) => {
   }
 };
 const enviarEmailRedefinicao = async (req, res) => {
-  const { email } = req.body;
+  const emailRaw = req.body?.email;
+  const email = typeof emailRaw === 'string' ? emailRaw.trim() : '';
+
+  const successPayload = {
+    message: 'E-mail de redefinição enviado com sucesso',
+  };
 
   try {
-    // 1. Verifica se o usuário existe
-    const user = await prisma.users.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
+    if (!email) {
+      return res.status(400).json({ message: 'E-mail é obrigatório.' });
     }
 
-    // 2. Gera token JWT com validade de 1h
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '5h' });
+    const user = await prisma.users.findUnique({ where: { email } });
 
-    // 3. Monta o link de redefinição
-  const url = new URL('/novasenha', process.env.BASE_URL);
-url.searchParams.set('token', token);
-const resetLink = url.toString();
+    if (!user) {
+      return res.status(200).json(successPayload);
+    }
 
-    // 4. Envia o e-mail com layout HTML profissional
+    const resetJwt = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const baseRaw =
+      process.env.FRONTEND_URL || process.env.BASE_URL || 'http://localhost:3000';
+    const base = String(baseRaw).replace(/\/$/, '');
+    const resetLink = `${base}/novasenha?token=${encodeURIComponent(resetJwt)}`;
+
     await transporter.sendMail({
-      from: `"CONMEL" <${process.env.MAIL_USER}>`,
+      from: `"Portal EMEI" <${process.env.MAIL_USER}>`,
       to: email,
-      subject: 'Redefinição de Senha - Portal CONMEL',
+      subject: 'Redefinição de Senha - Portal EMEI',
       html: `
         <!DOCTYPE html>
         <html lang="pt-BR">
@@ -1143,7 +1158,7 @@ const resetLink = url.toString();
               <img src="https://raw.githubusercontent.com/saulandre/emei-backend/main/src/public/favicon.png" alt="Logo EMEI" />
             </div>
             <div class="content">
-              <p>Olá ${user.nome || 'usuário'},</p>
+              <p>Olá ${user.name || 'usuário'},</p>
               <p>Você solicitou a redefinição da sua senha no <strong>Portal EMEI</strong>.</p>
               <p>Para criar uma nova senha, clique no botão abaixo:</p>
               <div style="text-align: center;">
@@ -1161,14 +1176,12 @@ const resetLink = url.toString();
           </div>
         </body>
         </html>
-      `
+      `,
     });
 
-    // 5. Resposta de sucesso
-    return res.status(200).json({ message: 'E-mail de redefinição enviado com sucesso' });
-
+    return res.status(200).json(successPayload);
   } catch (error) {
-    console.error('Erro ao enviar e-mail de redefinição:', error);
+    console.error('Erro ao enviar e-mail de redefinição:', error.message);
     return res.status(500).json({ message: 'Erro ao enviar email' });
   }
 };
@@ -1177,34 +1190,71 @@ const resetLink = url.toString();
 const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
-  if (!token || !newPassword) {
-    return res.status(400).json({ message: "Token e nova senha são obrigatórios." });
+  if (
+    !token ||
+    typeof token !== 'string' ||
+    newPassword === undefined ||
+    newPassword === null
+  ) {
+    return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+  }
+
+  let trimmedToken = String(token).trim();
+  try {
+    trimmedToken = decodeURIComponent(trimmedToken);
+  } catch {
+    /* mantém trim original */
+  }
+  trimmedToken = trimmedToken.trim();
+
+  console.log('TOKEN RECEBIDO (length):', trimmedToken.length);
+
+  const trimmedPassword = String(newPassword).trim();
+
+  if (!trimmedToken || !trimmedPassword) {
+    return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+  }
+
+  const jwtParts = trimmedToken.split('.');
+  if (jwtParts.length !== 3) {
+    return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
+  }
+
+  if (trimmedPassword.length < 6) {
+    return res.status(400).json({
+      message: 'A nova senha deve ter pelo menos 6 caracteres.',
+    });
   }
 
   try {
-    // Verifica o token JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
+    const decoded = jwt.verify(trimmedToken, process.env.JWT_SECRET);
+    const userId = decoded.userId ?? decoded.id;
 
-    // Busca o usuário no banco
-    const user = await prisma.users.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
+    if (userId == null || Number.isNaN(Number(userId))) {
+      return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
     }
 
-    // Hash da nova senha
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const user = await prisma.users.findUnique({ where: { id: Number(userId) } });
+    if (!user) {
+      return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
+    }
 
-    // Atualiza a senha no banco
+    const hashedPassword = await bcrypt.hash(trimmedPassword, 10);
+
     await prisma.users.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetTokenHash: null,
+        resetTokenExpires: null,
+        resetTokenVersion: { increment: 1 },
+      },
     });
 
-    return res.status(200).json({ message: "Senha redefinida com sucesso." });
+    return res.status(200).json({ message: 'Senha redefinida com sucesso.' });
   } catch (error) {
-    console.error("Erro ao redefinir senha:", error);
-    return res.status(401).json({ message: "Token inválido ou expirado." });
+    console.error('Erro ao redefinir senha:', error.message);
+    return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
   }
 };
 

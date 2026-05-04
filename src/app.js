@@ -12,8 +12,25 @@ const app = express()
 const prisma = new PrismaClient()
 
 app.use(helmet())
+const corsOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'https://comejaca.org.br',
+  'https://comejaca-qa.netlify.app',
+  'https://comejaca-qa.netlify.app/',
+]
+  .filter(Boolean)
+  .map((o) => String(o).replace(/\/$/, ''));
+
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'https://comejaca.org.br', 'https://comejaca-qa.netlify.app/'],
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const normalized = origin.replace(/\/$/, '');
+    if (corsOrigins.includes(normalized)) return cb(null, true);
+    return cb(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

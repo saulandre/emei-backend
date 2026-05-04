@@ -69,10 +69,11 @@ router.put('/pagamentos/:id/status', isAuthenticated, isAdmin, AtualizarpaymentI
 router.put('/atualizarPerfil/', isAuthenticated, atualizarPerfil)
 router.put('/participante/:id', isAuthenticated, updateInscricao);
 router.post('/forgot-password', enviarEmailRedefinicao);
-router.post('/reset-password',  resetPassword);
-
+router.post('/reset-password', resetPassword);
 /* router.post('/forgot-password', forgotPassword);
- */router.post('/recuperarsenha', resetPassword);
+ */
+/** Alias: mesmo handler e corpo que POST /reset-password */
+router.post('/recuperarsenha', resetPassword);
 // Middleware de tratamento de erros global
 router.use((err, req, res, next) => {
   console.error('💥 Erro:', err.message);
