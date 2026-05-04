@@ -3,8 +3,13 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { generateVerificationCode } = require('../services/validation');
 const dotenv = require('dotenv');
-const transporter = require('../config/mailer');
+const { sendMail } = require('../config/mailer');
 const Joi = require('joi');
+const {
+  validatePassword,
+  PASSWORD_POLICY_MESSAGE,
+  normalizePasswordForHash,
+} = require('../utils/passwordPolicy');
 const { v4: uuidv4 } = require('uuid');
 const { PrismaClient, Prisma } = require('@prisma/client');
 const multer = require('multer');
@@ -106,7 +111,7 @@ const RESEND_INTERVAL = 60000; // 60 segundos
 
  const newAccountEmail = async (name, email, code) => {
   try {
-    await transporter.sendMail({
+    await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       headers: {
         'X-Mailer': 'Nodemailer',
@@ -233,7 +238,7 @@ const upload = multer({ dest: 'uploads/' });
 
  const accountVerifiedEmail = async (name, email) => {
   try {
-    await transporter.sendMail({
+    await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       headers: {
         'X-Mailer': 'Nodemailer',
@@ -336,7 +341,7 @@ const upload = multer({ dest: 'uploads/' });
 
  const novoCodigoEmail = async (name, email, code) => {
   try {
-    await transporter.sendMail({
+    await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       to: email,
       subject: 'Novo código',
@@ -546,18 +551,14 @@ const upload = multer({ dest: 'uploads/' });
  
   try {
 
-    const isStrongPassword = (password) => {
-      const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
-      return strongPasswordRegex.test(password);
-    };
-    
     // Validação dos campos
     if (!name || !email || !password) {
       return res.status(400).json({ error: MESSAGES.errors.missingFields });
     }
-    if (!isStrongPassword(password)) {
+    const passwordNormalized = normalizePasswordForHash(password);
+    if (!validatePassword(passwordNormalized)) {
       return res.status(400).json({
-        error: "A senha deve conter pelo menos 8 caracteres, incluindo uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+        error: PASSWORD_POLICY_MESSAGE,
       });
     }
     // Verifica usuário existente
@@ -567,7 +568,7 @@ const upload = multer({ dest: 'uploads/' });
     }
 
     // Criptografia da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(passwordNormalized, 10);
     
     // Geração do código de verificação
     const verificationCode = generateVerificationCode();
@@ -1065,13 +1066,14 @@ const updateInscricao = async (req, res) => {
     });
   }
 };
+const FORGOT_PASSWORD_GENERIC_OK = {
+  message:
+    'Se o e-mail estiver cadastrado, enviaremos instruções para redefinição da senha.',
+};
+
 const enviarEmailRedefinicao = async (req, res) => {
   const emailRaw = req.body?.email;
   const email = typeof emailRaw === 'string' ? emailRaw.trim() : '';
-
-  const successPayload = {
-    message: 'E-mail de redefinição enviado com sucesso',
-  };
 
   try {
     if (!email) {
@@ -1081,7 +1083,7 @@ const enviarEmailRedefinicao = async (req, res) => {
     const user = await prisma.users.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(200).json(successPayload);
+      return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
     }
 
     const resetJwt = jwt.sign(
@@ -1095,11 +1097,12 @@ const enviarEmailRedefinicao = async (req, res) => {
     const base = String(baseRaw).replace(/\/$/, '');
     const resetLink = `${base}/novasenha?token=${encodeURIComponent(resetJwt)}`;
 
-    await transporter.sendMail({
-      from: `"Portal EMEI" <${process.env.MAIL_USER}>`,
-      to: email,
-      subject: 'Redefinição de Senha - Portal EMEI',
-      html: `
+    try {
+      await sendMail({
+        from: `"Portal EMEI" <${process.env.MAIL_USER}>`,
+        to: email,
+        subject: 'Redefinição de Senha - Portal EMEI',
+        html: `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
@@ -1177,12 +1180,16 @@ const enviarEmailRedefinicao = async (req, res) => {
         </body>
         </html>
       `,
-    });
+      });
+    } catch (mailErr) {
+      console.error('Erro ao enviar email:', mailErr);
+      return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
+    }
 
-    return res.status(200).json(successPayload);
+    return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
   } catch (error) {
-    console.error('Erro ao enviar e-mail de redefinição:', error.message);
-    return res.status(500).json({ message: 'Erro ao enviar email' });
+    console.error('Erro ao enviar email:', error);
+    return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
   }
 };
 
@@ -1220,9 +1227,9 @@ const resetPassword = async (req, res) => {
     return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
   }
 
-  if (trimmedPassword.length < 6) {
+  if (!validatePassword(trimmedPassword)) {
     return res.status(400).json({
-      message: 'A nova senha deve ter pelo menos 6 caracteres.',
+      message: PASSWORD_POLICY_MESSAGE,
     });
   }
 
@@ -1239,7 +1246,8 @@ const resetPassword = async (req, res) => {
       return res.status(401).json({ message: PASSWORD_RESET_GENERIC_ERROR });
     }
 
-    const hashedPassword = await bcrypt.hash(trimmedPassword, 10);
+    const pwdForHash = normalizePasswordForHash(trimmedPassword);
+    const hashedPassword = await bcrypt.hash(pwdForHash, 10);
 
     await prisma.users.update({
       where: { id: user.id },
@@ -1579,7 +1587,7 @@ const resetPassword = async (req, res) => {
       const resetLink = `https://www.emeirj.com.br/redefinir-senha?token=${resetToken}`;
   
       // Enviando o e-mail
-      await transporter.sendMail({
+      await sendMail({
         from: `"Seu App" <${process.env.MAIL_USER}>`,
         to: email,
         subject: "Redefinição de Senha",
@@ -1668,7 +1676,7 @@ const resetPassword = async (req, res) => {
     const resetLink = `http://emeirj.com.br/recuperarsenha/route?token=${token}`;
   
     try {
-      await transporter.sendMail({
+      await sendMail({
         from: `"EMEI" <${process.env.MAIL_USER}>`,
         headers: {
           'X-Mailer': 'Nodemailer',
@@ -1794,10 +1802,10 @@ const resetPassword = async (req, res) => {
         return res.status(400).json({ message: 'Token inválido ou expirado.' });
       }
   
-      const sanitizedPassword = newPassword.trim();
+      const sanitizedPassword = normalizePasswordForHash(newPassword);
   
-      if (sanitizedPassword.length < 6) {
-        return res.status(400).json({ message: 'A nova senha deve ter pelo menos 6 caracteres.' });
+      if (!validatePassword(sanitizedPassword)) {
+        return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
       }
   
       const passwordHash = await bcrypt.hash(sanitizedPassword, 10);
@@ -1912,6 +1920,40 @@ const resetPassword = async (req, res) => {
     }
   };
   
+const changePassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (
+      newPassword === undefined ||
+      newPassword === null ||
+      String(newPassword).trim() === ''
+    ) {
+      return res.status(400).json({ message: 'Nova senha é obrigatória.' });
+    }
+
+    const pwd = normalizePasswordForHash(newPassword);
+    if (!validatePassword(pwd)) {
+      return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
+    }
+
+    const userId = req.userId;
+    if (userId == null) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
+    const hashedPassword = await bcrypt.hash(pwd, 10);
+    await prisma.users.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return res.status(200).json({ message: 'Senha alterada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    return res.status(500).json({ error: 'Erro ao alterar a senha.' });
+  }
+};
+
 const atualizarPerfil = async (req, res) => {
   const { nome, email, telefone, comunicacaocomejaca, comunicacaomovimento, senha } = req.body;
   console.log('Dados recebidos para atualização:', req.body);
@@ -1942,8 +1984,11 @@ const atualizarPerfil = async (req, res) => {
 
     // Se a senha for fornecida, criptografa a nova senha
     if (senha) {
-      const hashedPassword = await bcrypt.hash(senha, 10);
-      updateData.password = hashedPassword;
+      const pwd = normalizePasswordForHash(senha);
+      if (!validatePassword(pwd)) {
+        return res.status(400).json({ error: PASSWORD_POLICY_MESSAGE });
+      }
+      updateData.password = await bcrypt.hash(pwd, 10);
     }
 
     const updatedUser = await prisma.users.update({
@@ -1951,9 +1996,11 @@ const atualizarPerfil = async (req, res) => {
       data: updateData,
     });
 
+    const { password: _passwordOmit, ...userSemSenha } = updatedUser;
+
     return res.status(200).json({
       message: 'Perfil atualizado com sucesso',
-      user: updatedUser,
+      user: userSemSenha,
     });
   } catch (error) {
     console.error('Erro ao atualizar o perfil:', error);
@@ -1964,7 +2011,7 @@ const atualizarPerfil = async (req, res) => {
 const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
   console.log('Arquivo recebido:', arquivo);
   try {
-    await transporter.sendMail({
+    await sendMail({
       from: `"EMEI" <${process.env.MAIL_USER}>`,
       to: ['and969696@outlook.com', 'saulandre@gmail.com', 'emeiiraja23@gmail.com'],
       subject: `Comprovante de ${nomeCompleto} enviado`,
@@ -2051,4 +2098,4 @@ const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
 };
 
   
-  module.exports = { esquecisenha, obterInscricao, getProfile, enviarEmailRedefinicao, updateProfile, atualizarInstituicao,enviarEmailComArquivo, listarInstituicoes, criarInstituicao, getparticipantes, participante,resendVerificationCode, login, register, validateToken,verificar, paymentId,resetPassword, forgotPassword,listarParticipantes, notificacao, AtualizarpaymentId, atualizarPerfil, updateInscricao, enviarComprovante}
+  module.exports = { esquecisenha, obterInscricao, getProfile, enviarEmailRedefinicao, updateProfile, atualizarInstituicao,enviarEmailComArquivo, listarInstituicoes, criarInstituicao, getparticipantes, participante,resendVerificationCode, login, register, validateToken,verificar, paymentId,resetPassword, forgotPassword,listarParticipantes, notificacao, AtualizarpaymentId, atualizarPerfil, updateInscricao, enviarComprovante, changePassword}
