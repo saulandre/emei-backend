@@ -112,12 +112,6 @@ const RESEND_INTERVAL = 60000; // 60 segundos
  const newAccountEmail = async (name, email, code) => {
   try {
     await sendMail({
-      from: `"EMEI" <${process.env.MAIL_USER}>`,
-      headers: {
-        'X-Mailer': 'EMEI-Portal',
-        'X-Priority': '3',
-        'Return-Path': 'process.env.MAIL_USER' 
-      },
       to: email,
       subject: 'Confirmação de Cadastro',
       html: `
@@ -239,12 +233,6 @@ const upload = multer({ dest: 'uploads/' });
  const accountVerifiedEmail = async (name, email) => {
   try {
     await sendMail({
-      from: `"EMEI" <${process.env.MAIL_USER}>`,
-      headers: {
-        'X-Mailer': 'EMEI-Portal',
-        'X-Priority': '3',
-        'Return-Path': 'process.env.MAIL_USER' 
-      },
       to: email,
       subject: '✅ Conta Verificada',
       html: `
@@ -342,7 +330,6 @@ const upload = multer({ dest: 'uploads/' });
  const novoCodigoEmail = async (name, email, code) => {
   try {
     await sendMail({
-      from: `"EMEI" <${process.env.MAIL_USER}>`,
       to: email,
       subject: 'Novo código',
       html: `
@@ -1099,7 +1086,6 @@ const enviarEmailRedefinicao = async (req, res) => {
 
     try {
       await sendMail({
-        from: `"Portal EMEI" <${process.env.MAIL_USER}>`,
         to: email,
         subject: 'Redefinição de Senha - Portal EMEI',
         html: `
@@ -1182,13 +1168,22 @@ const enviarEmailRedefinicao = async (req, res) => {
       `,
       });
     } catch (mailErr) {
-      console.error('Erro ao enviar email:', mailErr);
+      console.error(
+        '[forgot-password] Falha no envio (Resend):',
+        mailErr?.code || '',
+        mailErr?.message || mailErr,
+        mailErr?.resendError ? JSON.stringify(mailErr.resendError) : ''
+      );
       return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
     }
 
     return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    console.error(
+      '[forgot-password] Erro no fluxo:',
+      error?.code || '',
+      error?.message || error
+    );
     return res.status(200).json(FORGOT_PASSWORD_GENERIC_OK);
   }
 };
@@ -1588,7 +1583,6 @@ const resetPassword = async (req, res) => {
   
       // Enviando o e-mail
       await sendMail({
-        from: `"Seu App" <${process.env.MAIL_USER}>`,
         to: email,
         subject: "Redefinição de Senha",
         html: `
@@ -1677,12 +1671,6 @@ const resetPassword = async (req, res) => {
   
     try {
       await sendMail({
-        from: `"EMEI" <${process.env.MAIL_USER}>`,
-        headers: {
-          'X-Mailer': 'EMEI-Portal',
-          'X-Priority': '3',
-          'Return-Path': 'process.env.MAIL_USER' 
-        },
         to: email,
         subject: 'Redefinição de Senha',
         html: `
@@ -2012,7 +2000,6 @@ const enviarEmailComArquivo = async (nomeCompleto, arquivo) => {
   console.log('Arquivo recebido:', arquivo);
   try {
     await sendMail({
-      from: `"EMEI" <${process.env.MAIL_USER}>`,
       to: ['and969696@outlook.com', 'saulandre@gmail.com', 'emeiiraja23@gmail.com'],
       subject: `Comprovante de ${nomeCompleto} enviado`,
       html: `

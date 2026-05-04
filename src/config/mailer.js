@@ -5,12 +5,57 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 let resendClient = null;
+let warnedMissingFrom = false;
+
+/**
+ * Remetente Resend: use RESEND_FROM_EMAIL no Railway.
+ * - Apenas e-mail: formata como "Portal EMEI <email>"
+ * - Formato completo: "Nome <email@dominio.com>" (use aspas no .env se necessário)
+ * Legado: RESEND_FROM (mesma regra).
+ * Desenvolvimento: se nada estiver definido, usa o remetente de testes do Resend (defina domínio verificado em produção).
+ */
+const DEFAULT_RESEND_FROM = "Portal EMEI <onboarding@resend.dev>";
+
+function formatFromAddress(raw) {
+  const v = String(raw).trim();
+  if (!v) return null;
+  if (v.includes("<") && v.includes(">")) return v;
+  if (/^[^\s<>]+@[^\s<>]+$/.test(v)) {
+    return `Portal EMEI <${v}>`;
+  }
+  return v;
+}
+
+function resolveFrom(options) {
+  if (options.from) {
+    return options.from;
+  }
+
+  const fromEnv =
+    process.env.RESEND_FROM_EMAIL ||
+    process.env.RESEND_FROM ||
+    "";
+
+  const formatted = formatFromAddress(fromEnv);
+  if (formatted) {
+    return formatted;
+  }
+
+  if (!warnedMissingFrom) {
+    warnedMissingFrom = true;
+    console.warn(
+      "[mailer] RESEND_FROM_EMAIL não definido; usando remetente padrão de desenvolvimento Resend. " +
+        "Em produção, defina RESEND_FROM_EMAIL com o e-mail do domínio verificado."
+    );
+  }
+  return DEFAULT_RESEND_FROM;
+}
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
   if (!key || !String(key).trim()) {
     const err = new Error(
-      "RESEND_API_KEY não configurada. Configure a chave da API Resend."
+      "RESEND_API_KEY não configurada. No Railway, adicione a variável com a chave re_... da Resend."
     );
     err.code = "RESEND_NOT_CONFIGURED";
     throw err;
@@ -61,20 +106,8 @@ function mapAttachmentsForResend(attachments) {
   });
 }
 
-function resolveFrom(options) {
-  if (options.from) return options.from;
-  if (process.env.RESEND_FROM) return process.env.RESEND_FROM;
-  if (process.env.MAIL_USER) {
-    return `"EMEI" <${process.env.MAIL_USER}>`;
-  }
-  throw new Error(
-    "Remetente não definido: use from no envio ou defina RESEND_FROM ou MAIL_USER."
-  );
-}
-
 /**
- * Envia e-mail exclusivamente via Resend (API).
- * @param {object} options - Compatível com o objeto usado antes (from, to, subject, html, text, attachments, etc.)
+ * Envio centralizado via Resend (único canal).
  */
 async function sendMail(options) {
   const resend = getResend();
